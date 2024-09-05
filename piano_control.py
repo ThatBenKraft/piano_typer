@@ -12,7 +12,7 @@ import pygame
 from pygame import midi
 
 from packaging import Action, Keypress
-from visuals import Display
+from visuals import Display, Paths
 
 # List of keyboard keybinds
 KEYBOARD_KEYBINDS = {
@@ -56,7 +56,7 @@ CURSOR_KEYBINDS = {
 # Established "stop" key
 STOP_KEY = "C8"
 
-LETTERS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+LETTERS = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 # Sets a sensitivity
 SENSITIVITY = 10
@@ -81,7 +81,6 @@ def read_input(midi_device: midi.Input) -> Keypress:
         # Accesses event from device in format:
         # [[status,data1,data2,data3],timestamp]
         event: list[list[int], int] = midi_device.read(1)[0]  # type: ignore
-
         # Accesses data from event
         data = event[0]
         # If existant data:
@@ -97,29 +96,20 @@ def read_input(midi_device: midi.Input) -> Keypress:
     return Keypress()
 
 
-def process_keypress(keypress: Keypress, display: Display) -> bool:
+def process_keypress(keypress: Keypress) -> bool:
     """
     Determines if a keypress should activate controls and display. Returns
     true if stopping.
     """
-    # If empty action, returns false
-    if keypress.is_empty():
-        return False
-
-    # Updates display
-    display.update_display(keypress)
-
     # If key log is active, prints keypress
     if KEY_LOG:
-        print(keypress.to_string())
-
+        print(str(keypress))
     # If in piano mode, returns false
     if PIANO_MODE:
         return False
 
     # If in list, presses corresponding keyboard button
     if keypress.note in KEYBOARD_KEYBINDS:
-        print("toggling keyboard")
         toggle_device(keypress, keyboard)
     # If in list, presses corresponding mouse button
     elif keypress.note in MOUSE_KEYBINDS:
@@ -166,9 +156,9 @@ def input_loop(midi_device: midi.Input, stop_event: Event) -> None:
     Acquires button input continuously from device. Returns true if stopping.
     """
     # Creates a display object
-    display = Display()
+    display = Display(Paths.ASSETS / "piano_small.png")
 
-    # While stop event is npt set:
+    # While stop event is not set:
     while not stop_event.is_set():
         # Limits queries to speicifed Hz
         clock.tick(240)
@@ -179,8 +169,10 @@ def input_loop(midi_device: midi.Input, stop_event: Event) -> None:
                 return
         # Reads input into keypress
         keypress = read_input(midi_device)
+        # Updates display
+        display.update_key(keypress)
         # Processes button press and stops if specified
-        if process_keypress(keypress, display):
+        if process_keypress(keypress):
             return
 
 
@@ -238,7 +230,7 @@ def device_info(device_index: int) -> tuple[str, bool]:
     Accesses device information. Returns tuple of name and state.
     """
     # Get info
-    info: tuple[str, str, int, int, int] = midi.get_device_info(device_index)
+    info: tuple[str, str, int, int, int] = midi.get_device_info(device_index)  # type: ignore
     # Returns name and input state
     return (info[1].decode("UTF-8"), bool(info[2]))  # type:ignore
 
@@ -288,7 +280,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-
     run = True
 
     # Argument handling
@@ -305,6 +296,8 @@ if __name__ == "__main__":
 
     if run:
         # Runs program
+        PIANO_MODE = True
+
         main()
         # Ends program
         print("\nThanks for using the keyboard swap!\n")

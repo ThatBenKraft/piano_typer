@@ -43,7 +43,7 @@ class Keypress:
         """
         return self.action == Action.STATIC
 
-    def to_string(self) -> str:
+    def __str__(self) -> str:
         """
         Returns current package as a string.
         """
