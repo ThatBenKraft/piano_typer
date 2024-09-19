@@ -1,59 +1,40 @@
-from dataclasses import dataclass
-from enum import Enum, auto
+NOTES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 
-class Action(Enum):
-    """
-    Names action types.
-    """
-
-    PRESS = auto()
-    RELEASE = auto()
-    STATIC = auto()
-
-
-@dataclass
 class Keypress:
     """
     Allows for storage of keypress information.
     """
 
-    letter: str = ""
-    octave: int = 0
-    velocity: int = 0
-    timestamp: int = 0
-    note: str = ""
-    action: Action = Action.STATIC
+    def __init__(self, note_index: int, octave: int, press: bool = True) -> None:
 
-    def __post_init__(self) -> None:
-        """
-        Creates a concatenated 'Note' if not already given.
-        """
-        if self.note == "":
-            self.note = f"{self.letter}{self.octave}"
-        # Bases action on velocity
-        if self.velocity == 64:
-            self.action = Action.RELEASE
-        elif self.velocity != 0:
-            self.action = Action.PRESS
+        if note_index not in range(len(NOTES)):
+            raise ValueError(
+                f"Invalid note index: {note_index}, number of notes: {len(NOTES)}"
+            )
 
-    def is_empty(self) -> bool:
-        """
-        Returns True if empty.
-        """
-        return self.action == Action.STATIC
+        self.note = NOTES[note_index]
+        self.note_index = note_index
+        self.octave = octave
+        self.press = press
 
     def __str__(self) -> str:
         """
         Returns current package as a string.
         """
-        # Returns empty package representation
-        if self.is_empty():
-            return f"[ EMPTY PACKAGE ]"
         # Returns populated package representation
-        else:
-            return (
-                f"[ Note: {self.note.center(15)}"
-                f"Action: {self.action.name.center(15)}"
-                f"Time: {str(self.timestamp).center(15)} ]"
-            )
+        full_note_string = f"Note:  {f'{self.note}{self.octave}'}".center(20)
+        action_string = f"Action:  {'PRESS' if self.press else 'RELEASE'}".center(20)
+        return f"[ {full_note_string} | {action_string} ]".center(60)
+
+    def inverted(self):
+        """
+        Returns instance of Keypress with inverted action.
+        """
+        self.press = not self.press
+        return self
+
+
+if __name__ == "__main__":
+    print(Keypress(10, 0, False))
+    print(Keypress(0, 0, True))

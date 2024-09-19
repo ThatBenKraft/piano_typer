@@ -11,7 +11,7 @@ import mouse
 import pygame
 from pygame import midi
 
-from packaging import Action, Keypress
+from packaging import Keypress
 from visuals import Display, Paths
 
 # List of keyboard keybinds
@@ -59,7 +59,7 @@ STOP_KEY = "C8"
 LETTERS = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 # Sets a sensitivity
-SENSITIVITY = 10
+SENSITIVITY = 11
 
 # Sets modes
 PIANO_MODE = False
@@ -72,28 +72,31 @@ held_directions = []
 clock = pygame.time.Clock()
 
 
-def read_input(midi_device: midi.Input) -> Keypress:
+def read_input(midi_device: midi.Input) -> Keypress | None:
     """
     Attemps to read from device. Returns a keypress.
     """
     # If device returns a readable value
-    if midi_device.poll():
-        # Accesses event from device in format:
-        # [[status,data1,data2,data3],timestamp]
-        event: list[list[int], int] = midi_device.read(1)[0]  # type: ignore
-        # Accesses data from event
-        data = event[0]
-        # If existant data:
-        if data:
-            # Returns a populated keypress
-            return Keypress(
-                letter=LETTERS[data[1] % 12],
-                octave=data[1] // 12,
-                velocity=data[2],
-                timestamp=event[1],  # type: ignore
-            )
-    # If any step fails, returns an empty keypress
-    return Keypress()
+    if not midi_device.poll():
+        return
+    # Accesses event from device in format:
+    # [[status,data1,data2,data3],timestamp]
+    event: list[list[int], int] = midi_device.read(1)[0]  # type: ignore
+    # Accesses data from event
+    inner_data = event[0]
+    # Returns None if no data
+    if not inner_data:
+        return
+    # Determines action from velocity
+    match inner_data[2]:
+        case 0:
+            return
+        case 64:
+            press = False
+        case _:
+            press = True
+    # Returns a populated keypress
+    return Keypress(note_index=inner_data[1] % 12, octave=inner_data[1] // 12, press=press)
 
 
 def process_keypress(keypress: Keypress) -> bool:
@@ -102,7 +105,7 @@ def process_keypress(keypress: Keypress) -> bool:
     true if stopping.
     """
     # If key log is active, prints keypress
-    if KEY_LOG:
+    if KEY_LOG and keypress:
         print(str(keypress))
     # If in piano mode, returns false
     if PIANO_MODE:
@@ -127,12 +130,8 @@ def toggle_device(keypress: Keypress, device) -> None:
     """
     # Translates note into hotkey
     hotkey = {**KEYBOARD_KEYBINDS, **MOUSE_KEYBINDS}[keypress.note]
-    # Presses device hotkey
-    if keypress.action == Action.PRESS:
-        device.press(hotkey)
-    # Releases device hotkey
-    elif keypress.action == Action.RELEASE:
-        device.release(hotkey)
+    # Presses or releases device hotkey
+    device.press(hotkey) if keypress.press else device.release(hotkey)
 
 
 def update_held_queue(keypress: Keypress) -> None:
@@ -142,11 +141,11 @@ def update_held_queue(keypress: Keypress) -> None:
     # Translates direction from keypress
     direction = CURSOR_KEYBINDS[keypress.note]
     # If a keypress PRESS action and direction not already in queue
-    if keypress.action == Action.PRESS and direction not in held_directions:
+    if keypress.press and direction not in held_directions:
         # Add direction to queue
         held_directions.append(direction)
     # If a keypress RELEASE action and direction is in queue
-    elif keypress.action == Action.RELEASE and direction in held_directions:
+    elif not keypress.press and direction in held_directions:
         # Remove direction from queue
         held_directions.remove(direction)
 
@@ -156,24 +155,25 @@ def input_loop(midi_device: midi.Input, stop_event: Event) -> None:
     Acquires button input continuously from device. Returns true if stopping.
     """
     # Creates a display object
-    display = Display(Paths.ASSETS / "piano_small.png")
+    display = Display(Paths.ASSETS / "octave.png")
 
     # While stop event is not set:
     while not stop_event.is_set():
         # Limits queries to speicifed Hz
-        clock.tick(240)
+        clock.tick(120)
         # Updates window and checks for closing
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                print("Close window.")
+                print("\nClosed window.")
                 return
         # Reads input into keypress
         keypress = read_input(midi_device)
+        if keypress:
         # Updates display
-        display.update_key(keypress)
-        # Processes button press and stops if specified
-        if process_keypress(keypress):
-            return
+            display.update_key(keypress)
+            # Processes button press and breaks if specified
+            if process_keypress(keypress):
+                break
 
 
 def cursor_loop(stop_event: Event) -> None:
@@ -207,12 +207,7 @@ def init_midi_devices() -> midi.Input:
         # Unpacks info
         device_name, device_input = device_info(device_index)
         # Prints device info
-        print(f"[{device_index}] {device_name:40}", end="Type: ")
-        # Determines if input or output device
-        if device_input:
-            print("INPUT")
-        else:
-            print("OUTPUT")
+        print(f"[{device_index}] {device_name:40} Type: {"INPUT" if device_input else "OUTPUT"}")
 
     # Gets ID of first input device
     input_index = midi.get_default_input_id()
@@ -250,7 +245,6 @@ def main() -> None:
     # Opens a threading executor
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # Opens thread for button input
-
         input_future = executor.submit(
             # Feeds multiple arguments into loop inside submit function
             lambda p: input_loop(*p),
@@ -258,9 +252,6 @@ def main() -> None:
         )
         # Opens thread for directional processing
         cursor_future = executor.submit(cursor_loop, stop_event)
-
-        # for future in concurrent.futures.as_completed([input_future, mouse_future]):
-        #     print(repr(future.exception()))
 
         try:
             # While stop event has not been set:
@@ -296,7 +287,7 @@ if __name__ == "__main__":
 
     if run:
         # Runs program
-        PIANO_MODE = True
+        # PIANO_MODE = True
 
         main()
         # Ends program
