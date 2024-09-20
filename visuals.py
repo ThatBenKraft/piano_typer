@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pygame
 
-from packaging import NOTES, Keypress
+from packaging import Keypress
 
 __author__ = "Ben Kraft"
 __copyright__ = "None"
@@ -31,8 +31,8 @@ class Defaults:
 
     NUM_OCTAVES = 5
     STARTING_OCTAVE = 3
-    SCALE = 1.0
-    FRAME_RATE = 60
+    SCALE = 1
+    FRAME_RATE = 120
 
 
 class Paths:
@@ -41,6 +41,7 @@ class Paths:
     """
 
     ASSETS = Path(__file__).parent / "assets"
+    OCTAVE = ASSETS / "octave.png"
     ICON = ASSETS / "icon.png"
 
 
@@ -51,7 +52,6 @@ class Display:
 
     def __init__(
         self,
-        octave_image: Path,
         num_octaves: int = Defaults.NUM_OCTAVES,
         starting_octave: int = Defaults.STARTING_OCTAVE,
         scale: float = Defaults.SCALE,
@@ -60,62 +60,89 @@ class Display:
         """
         A window display to render piano and key presses when they occur.
         """
-        # Defines octave surface
-        octave_surface = pygame.image.load(octave_image)
         # Sets display constants
+        pygame.init()
         self.NUM_OCTAVES = num_octaves
         self.STARTING_OCTAVE = starting_octave
-        self.SCALE = scale
-        # Acquires scaled sizes from surface
-        self._octave_width, self._octave_height = (
-            dimension * self.SCALE for dimension in octave_surface.get_size()
-        )
-        # Creates scaled octave surface
-        self._scaled_octave_surface = pygame.transform.scale(
-            octave_surface, (self._octave_width, self._octave_height)
-        )
-        # Sets a display window with image's size
-        self.window = pygame.display.set_mode(
-            (self._octave_width * self.NUM_OCTAVES, self._octave_height)
-        )
-        # Loads all key images into memory
-        self._load_key_images()
+        self.scale = scale
+        self.ACTIONS = ("release", "press")
+        self.NOTES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+        self._clock = pygame.time.Clock()
+        self.clear_memory()
         # Adds a title to display
         pygame.display.set_caption("Piano Display")
         # Loads window icon
-        pygame.display.set_icon(pygame.image.load(Paths.ICON))
+        pygame.display.set_icon(self.load_image(Paths.ICON))
+        # Loads all key images into memory
+        self._load_key_images()
         # Draws extended piano
-        self.refresh(flourish)
+        self.refresh(flourish, resize=True)
+
+    def __del__(self) -> None:
+        pygame.quit()
+
+    def load_image(self, path: Path, cache: bool = False) -> pygame.Surface:
+        """
+        Loads image from path.
+        """
+        if path in self.image_memory:
+            # Returns scaled image
+            return self._scale_image(self.image_memory[path])
+        else:
+            image = pygame.image.load(path)
+            # Adds to memory if specified under path
+            if cache:
+                self.image_memory[path] = image
+            return self._scale_image(image)
+
+    def _scale_image(self, image: pygame.Surface) -> pygame.Surface:
+        """
+        Scales image by factor.
+        """
+        new_dimensions = tuple(dimension * self.scale for dimension in image.get_size())
+        return pygame.transform.scale(image, new_dimensions)
 
     def _load_key_images(self) -> None:
         """
         Loads all key images into memory.
         """
-        # Initializes dictionary
-        self._key_images: dict[str, list[pygame.Surface]] = {"press": [], "release": []}
         # For each action:
-        for action in self._key_images:
+        for action in self.ACTIONS:
             # For each note:
-            for note in NOTES:
-                # Defines path and loads image
-                path = Paths.ASSETS / action / f"{note}.png"
-                image = pygame.image.load(path).convert_alpha()
-                # Adds image to corresponding list
-                self._key_images[action].append(image)
+            for note in self.NOTES:
+                # Creates path and loads image to memory
+                self.load_image(Paths.ASSETS / action / f"{note}.png", cache=True)
 
-    def refresh(self, flourish: bool = False) -> None:
+    def clear_memory(self) -> None:
+        """
+        Clears image memory.
+        """
+        self.image_memory: dict[Path, pygame.Surface] = {}
+
+    def refresh(self, flourish: bool = False, resize: bool = False) -> None:
         """
         Draws piano on display screen.
         """
+        # Defines octave surface
+        octave_image = self.load_image(Paths.OCTAVE, cache=True)
+        # Sets a display window with image's size
+        if resize:
+            self.window = pygame.display.set_mode(
+                (
+                    octave_image.get_width() * self.NUM_OCTAVES,
+                    octave_image.get_height(),
+                ),
+                pygame.RESIZABLE,
+            )
         # Fills screen with black
         self.window.fill((255, 255, 255))
         # For the number of octaves defined:
-        for i in range(self.NUM_OCTAVES):
+        for octave in range(self.NUM_OCTAVES):
             # If flourishing, spaces out octave draws to fill 1 second
             if flourish:
                 time.sleep(0.5 / self.NUM_OCTAVES)
             # Draws a piano octave in corresponding location
-            self._draw_element_at(self._scaled_octave_surface, i, flourish)
+            self._draw_element_at(octave_image, octave, update=flourish)
         # Updates the full display
         pygame.display.flip()
 
@@ -124,33 +151,26 @@ class Display:
         Updates keyboard to match keypress.
         """
         # Defines action
-        action = "press" if keypress.press else "release"
-        # Creates scaled surface from image
-        scaled_key_surface = pygame.transform.scale(
-            self._key_images[action][keypress.note_index],
-            (self._octave_width, self._octave_height),
-        )
+        action = self.ACTIONS[keypress.press]
         # Draws key at relative octave
         self._draw_element_at(
-            scaled_key_surface, keypress.octave - self.STARTING_OCTAVE
+            self.load_image(Paths.ASSETS / action / f"{keypress.note}.png"),
+            keypress.octave - self.STARTING_OCTAVE,
         )
 
     def _draw_element_at(
-        self, surface: pygame.Surface, octave_num: int, update: bool = True
+        self, image: pygame.Surface, octave: int, update: bool = True
     ) -> None:
         """
         Draws surface at specified octave.
         """
         # Creates rectangle size of octave surface at relative position
-        octave_rectangle = pygame.Rect(
-            (octave_num * self._octave_width, 0),  # (x, y)
-            (self._octave_width, self._octave_height),  # (width, height)
-        )
+        rectangle = pygame.Rect((octave * image.get_width(), 0), image.get_size())
         # Draws surface in location of rectangle
-        self.window.blit(surface, octave_rectangle)
+        self.window.blit(image.convert_alpha(), rectangle)
         # If specified, updates display at rectangle
         if update:
-            pygame.display.update(octave_rectangle)
+            pygame.display.update(rectangle)
 
     def is_closed(self) -> bool:
         """
@@ -168,14 +188,12 @@ class Display:
         """
         Delays by amount of time nessesary to maintain specified frame rate.
         """
-        pygame.time.Clock().tick(frame_rate)
+        self._clock.tick(frame_rate)
 
 
 if __name__ == "__main__":
-    # Initializes pygame
-    pygame.init()
     # Creates a display
-    display = Display(Paths.ASSETS / "octave.png")
+    display = Display()
 
     time.sleep(0.5)
     keypress = Keypress(note_index=0, octave=5)
@@ -185,11 +203,9 @@ if __name__ == "__main__":
     display.update_key(keypress)
 
     # Keeps display running until closed
-    closed = False
-    while not closed:
+    while True:
 
         display.tick()
-        closed = display.is_closed()
-
-    # Closes pygame
-    pygame.quit()
+        display.refresh()
+        if display.is_closed():
+            break

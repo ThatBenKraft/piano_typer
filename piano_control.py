@@ -12,7 +12,7 @@ import pygame
 from pygame import midi
 
 from packaging import Keypress
-from visuals import Display, Paths
+from visuals import Display
 
 # List of keyboard keybinds
 KEYBOARD_KEYBINDS = {
@@ -55,8 +55,6 @@ CURSOR_KEYBINDS = {
 
 # Established "stop" key
 STOP_KEY = "C8"
-
-LETTERS = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 # Sets a sensitivity
 SENSITIVITY = 11
@@ -112,16 +110,16 @@ def process_keypress(keypress: Keypress) -> bool:
         return False
 
     # If in list, presses corresponding keyboard button
-    if keypress.note in KEYBOARD_KEYBINDS:
+    if keypress.full_note in KEYBOARD_KEYBINDS:
         toggle_device(keypress, keyboard)
     # If in list, presses corresponding mouse button
-    elif keypress.note in MOUSE_KEYBINDS:
+    elif keypress.full_note in MOUSE_KEYBINDS:
         toggle_device(keypress, mouse)
     # If mouse direction, add/remove to/from queue
-    elif keypress.note in CURSOR_KEYBINDS:
+    elif keypress.full_note in CURSOR_KEYBINDS:
         update_held_queue(keypress)
     # Exits program if stop key is pressed
-    return keypress.note == STOP_KEY
+    return keypress.full_note == STOP_KEY
 
 
 def toggle_device(keypress: Keypress, device) -> None:
@@ -129,7 +127,7 @@ def toggle_device(keypress: Keypress, device) -> None:
     Toggles device based on keypress.
     """
     # Translates note into hotkey
-    hotkey = {**KEYBOARD_KEYBINDS, **MOUSE_KEYBINDS}[keypress.note]
+    hotkey = {**KEYBOARD_KEYBINDS, **MOUSE_KEYBINDS}[keypress.full_note]
     # Presses or releases device hotkey
     device.press(hotkey) if keypress.press else device.release(hotkey)
 
@@ -139,7 +137,7 @@ def update_held_queue(keypress: Keypress) -> None:
     Updates held queue with current keypress.
     """
     # Translates direction from keypress
-    direction = CURSOR_KEYBINDS[keypress.note]
+    direction = CURSOR_KEYBINDS[keypress.full_note]
     # If a keypress PRESS action and direction not already in queue
     if keypress.press and direction not in held_directions:
         # Add direction to queue
@@ -155,7 +153,7 @@ def input_loop(midi_device: midi.Input, stop_event: Event) -> None:
     Acquires button input continuously from device. Returns true if stopping.
     """
     # Creates a display object
-    display = Display(Paths.ASSETS / "octave.png")
+    display = Display()
 
     # While stop event is not set:
     while not stop_event.is_set():

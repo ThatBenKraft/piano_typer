@@ -13,24 +13,27 @@ from visuals import Display, Paths
 
 EXPORT_DIRECTORY_PATH = Paths.ASSETS / "export"
 
-DISTANCE = 40
+NUM_KEYS_PRESSED = 25
 
 SAVE_IMAGES = False
+FRAMES_PER_SECOND = 50
+MILLISECONDS_PER_FRAME = 1000 / FRAMES_PER_SECOND
+if MILLISECONDS_PER_FRAME < 20:
+    raise ValueError("FPS too high!")
+
 index = 0
 
 
 def main() -> None:
 
-    display = Display(
-        Paths.ASSETS / "octave.png", num_octaves=10, scale=0.5, flourish=False
-    )
+    display = Display(num_octaves=6, scale=1, flourish=False)
 
     frames: list[Image.Image] = []
 
     empty_directory(EXPORT_DIRECTORY_PATH)
 
     # return
-    keypress_history: deque[Keypress] = deque([], maxlen=DISTANCE)
+    keypress_history: deque[Keypress] = deque([], maxlen=NUM_KEYS_PRESSED)
 
     # For each octave:
     for octave in range(display.NUM_OCTAVES):
@@ -39,7 +42,7 @@ def main() -> None:
             # Creates keypress
             keypress = Keypress(note_index, octave + display.STARTING_OCTAVE)
             # If keypress history is full:
-            if len(keypress_history) == DISTANCE:
+            if len(keypress_history) == NUM_KEYS_PRESSED:
                 # Accesses and inverts keypress from DISTANCE ago
                 display.update_key(keypress_history[0].inverted())
             # Updates display with keypress
@@ -56,11 +59,22 @@ def main() -> None:
         # Adds window image to frames
         frames.append(get_image(display))
 
+    export_as_gif(frames, EXPORT_DIRECTORY_PATH / "demo.gif")
+
+    frames.reverse()
+
+    export_as_gif(frames, EXPORT_DIRECTORY_PATH / "demo_reversed.gif")
+
+
+def export_as_gif(frames: list[Image.Image], path: Path) -> None:
+    """
+    Exports frames as gif under specified path.
+    """
     frames[0].save(
-        EXPORT_DIRECTORY_PATH / "demo.gif",
+        path,
         save_all=True,
         append_images=frames[1:],
-        duration=20,
+        duration=MILLISECONDS_PER_FRAME,
         loop=0,
     )
 

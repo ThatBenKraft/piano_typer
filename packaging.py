@@ -16,6 +16,7 @@ class Keypress:
         self.note = NOTES[note_index]
         self.note_index = note_index
         self.octave = octave
+        self.full_note = f"{self.note}{self.octave}"
         self.press = press
 
     def __str__(self) -> str:
@@ -23,9 +24,9 @@ class Keypress:
         Returns current package as a string.
         """
         # Returns populated package representation
-        full_note_string = f"Note:  {f'{self.note}{self.octave}'}".center(20)
+        note_string = f"Note:  {self.full_note}".center(20)
         action_string = f"Action:  {'PRESS' if self.press else 'RELEASE'}".center(20)
-        return f"[ {full_note_string} | {action_string} ]".center(60)
+        return f"[ {note_string} | {action_string} ]".center(60)
 
     def inverted(self):
         """
