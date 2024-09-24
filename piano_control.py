@@ -11,7 +11,7 @@ import mouse
 import pygame
 from pygame import midi
 
-from packaging import Keypress
+from packaging import NOTES, Keystroke
 from visuals import Display
 
 # List of keyboard keybinds
@@ -70,9 +70,9 @@ held_directions = []
 clock = pygame.time.Clock()
 
 
-def read_input(midi_device: midi.Input) -> Keypress | None:
+def read_input(midi_device: midi.Input) -> Keystroke | None:
     """
-    Attemps to read from device. Returns a keypress.
+    Attemps to read from device. Returns a keystroke.
     """
     # If device returns a readable value
     if not midi_device.poll():
@@ -93,57 +93,57 @@ def read_input(midi_device: midi.Input) -> Keypress | None:
             press = False
         case _:
             press = True
-    # Returns a populated keypress
-    return Keypress(note_index=inner_data[1] % 12, octave=inner_data[1] // 12, press=press)
+    # Returns a populated keystroke
+    return Keystroke(NOTES[inner_data[1] % 12], inner_data[1] // 12, press)
 
 
-def process_keypress(keypress: Keypress) -> bool:
+def process_keystroke(keystroke: Keystroke) -> bool:
     """
-    Determines if a keypress should activate controls and display. Returns
+    Determines if a keystroke should activate controls and display. Returns
     true if stopping.
     """
-    # If key log is active, prints keypress
-    if KEY_LOG and keypress:
-        print(str(keypress))
+    # If key log is active, prints keystroke
+    if KEY_LOG and keystroke:
+        print(str(keystroke))
     # If in piano mode, returns false
     if PIANO_MODE:
         return False
 
     # If in list, presses corresponding keyboard button
-    if keypress.full_note in KEYBOARD_KEYBINDS:
-        toggle_device(keypress, keyboard)
+    if keystroke.full_note in KEYBOARD_KEYBINDS:
+        toggle_device(keystroke, keyboard)
     # If in list, presses corresponding mouse button
-    elif keypress.full_note in MOUSE_KEYBINDS:
-        toggle_device(keypress, mouse)
+    elif keystroke.full_note in MOUSE_KEYBINDS:
+        toggle_device(keystroke, mouse)
     # If mouse direction, add/remove to/from queue
-    elif keypress.full_note in CURSOR_KEYBINDS:
-        update_held_queue(keypress)
+    elif keystroke.full_note in CURSOR_KEYBINDS:
+        update_held_queue(keystroke)
     # Exits program if stop key is pressed
-    return keypress.full_note == STOP_KEY
+    return keystroke.full_note == STOP_KEY
 
 
-def toggle_device(keypress: Keypress, device) -> None:
+def toggle_device(keystroke: Keystroke, device) -> None:
     """
-    Toggles device based on keypress.
+    Toggles device based on keystroke.
     """
     # Translates note into hotkey
-    hotkey = {**KEYBOARD_KEYBINDS, **MOUSE_KEYBINDS}[keypress.full_note]
+    hotkey = {**KEYBOARD_KEYBINDS, **MOUSE_KEYBINDS}[keystroke.full_note]
     # Presses or releases device hotkey
-    device.press(hotkey) if keypress.press else device.release(hotkey)
+    device.press(hotkey) if keystroke.press else device.release(hotkey)
 
 
-def update_held_queue(keypress: Keypress) -> None:
+def update_held_queue(keystroke: Keystroke) -> None:
     """
-    Updates held queue with current keypress.
+    Updates held queue with current keystroke.
     """
-    # Translates direction from keypress
-    direction = CURSOR_KEYBINDS[keypress.full_note]
-    # If a keypress PRESS action and direction not already in queue
-    if keypress.press and direction not in held_directions:
+    # Translates direction from keystroke
+    direction = CURSOR_KEYBINDS[keystroke.full_note]
+    # If a keystroke PRESS action and direction not already in queue
+    if keystroke.press and direction not in held_directions:
         # Add direction to queue
         held_directions.append(direction)
-    # If a keypress RELEASE action and direction is in queue
-    elif not keypress.press and direction in held_directions:
+    # If a keystroke RELEASE action and direction is in queue
+    elif not keystroke.press and direction in held_directions:
         # Remove direction from queue
         held_directions.remove(direction)
 
@@ -164,13 +164,13 @@ def input_loop(midi_device: midi.Input, stop_event: Event) -> None:
             if event.type == pygame.QUIT:
                 print("\nClosed window.")
                 return
-        # Reads input into keypress
-        keypress = read_input(midi_device)
-        if keypress:
+        # Reads input into keystroke
+        keystroke = read_input(midi_device)
+        if keystroke:
         # Updates display
-            display.update_key(keypress)
+            display.update_key(keystroke)
             # Processes button press and breaks if specified
-            if process_keypress(keypress):
+            if process_keystroke(keystroke):
                 break
 
 

@@ -8,7 +8,7 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import pygame
 from PIL import Image
 
-from packaging import NOTES, Keypress
+from packaging import NOTES, Keystroke
 from visuals import Display, Paths
 
 EXPORT_DIRECTORY_PATH = Paths.ASSETS / "export"
@@ -26,44 +26,44 @@ index = 0
 
 def main() -> None:
 
-    display = Display(num_octaves=6, scale=1, flourish=False)
+    display = Display(num_octaves=6, scale=1)
 
     frames: list[Image.Image] = []
 
     empty_directory(EXPORT_DIRECTORY_PATH)
 
     # return
-    keypress_history: deque[Keypress] = deque([], maxlen=NUM_KEYS_PRESSED)
+    keystroke_history: deque[Keystroke] = deque([], maxlen=NUM_KEYS_PRESSED)
 
     # For each octave:
-    for octave in range(display.NUM_OCTAVES):
+    for octave in range(display.num_octaves):
         # For each note index:
-        for note_index in range(len(NOTES)):
-            # Creates keypress
-            keypress = Keypress(note_index, octave + display.STARTING_OCTAVE)
-            # If keypress history is full:
-            if len(keypress_history) == NUM_KEYS_PRESSED:
-                # Accesses and inverts keypress from DISTANCE ago
-                display.update_key(keypress_history[0].inverted())
-            # Updates display with keypress
-            display.update_key(keypress)
+        for note in NOTES:
+            # Creates keystroke
+            keystroke = Keystroke(note, octave + display.starting_octave)
+            # If keystroke history is full:
+            if len(keystroke_history) == NUM_KEYS_PRESSED:
+                # Accesses and inverts keystroke from DISTANCE ago
+                display.update_key(keystroke_history[0].inverted())
+            # Updates display with keystroke
+            display.update_key(keystroke)
             # Adds window image to frames
             frames.append(get_image(display))
-            # Adds keypress to history
-            keypress_history.append(keypress)
+            # Adds keystroke to history
+            keystroke_history.append(keystroke)
 
-    # For each keypress in remaining history:
-    for keypress in keypress_history:
-        # Updates display with keypress
-        display.update_key(keypress.inverted())
+    # For each keystroke in remaining history:
+    for keystroke in keystroke_history:
+        # Updates display with keystroke
+        display.update_key(keystroke.inverted())
         # Adds window image to frames
         frames.append(get_image(display))
 
     export_as_gif(frames, EXPORT_DIRECTORY_PATH / "demo.gif")
 
-    frames.reverse()
+    # frames.reverse()
 
-    export_as_gif(frames, EXPORT_DIRECTORY_PATH / "demo_reversed.gif")
+    # export_as_gif(frames, EXPORT_DIRECTORY_PATH / "demo_reversed.gif")
 
 
 def export_as_gif(frames: list[Image.Image], path: Path) -> None:
@@ -84,9 +84,9 @@ def get_image(display: Display, save_image: bool = SAVE_IMAGES) -> Image.Image:
     Gets current window image and saves if specified.
     """
     # Converts display surface to string
-    string_data = pygame.image.tostring(display.window, "RGBA")
+    string_data = pygame.image.tostring(display._window, "RGBA")
     # Creates image from string
-    image = Image.frombytes("RGBA", display.window.get_size(), string_data)
+    image = Image.frombytes("RGBA", display._window.get_size(), string_data)
     # Saves image if specified
     if save_image:
         global index

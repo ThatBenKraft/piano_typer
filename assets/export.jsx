@@ -1,32 +1,13 @@
 // Get the active Illustrator document
 var doc = app.activeDocument;
-doc.artboards.setActiveArtboardIndex(2);
-const assetPath = "G:/My Drive/Programming/Python/piano-typer/assets/";
-// Function to isolate and export each group on the same artboard
-/**
- * @param {float} scale - The export scale
- */
-function exportKeys(scale) {
-    const actions = ["press", "release"];
-    // Hide all items in both layers
-    actOnItemsInLayers(actions, hideItem);
-
-    actOnItemsInLayers(actions, revealAndExport);
-    // Show all items in both layers
-    actOnItemsInLayers(actions, showItem);
-}
-
-function exportPiano(scale) {
-    // Hide all items in both layers
-    actOnItemsInLayers(["press"], hideItem);
-    actOnItemsInLayers(["release", "background"], showItem);
-
-    exportImage(assetPath + "octave.png", scale);
-
-}
+doc.artboards.setActiveArtboardIndex(0);
+const assetPath = "G:/My Drive/Programming/Python/Piano Typer/assets/";
+const allLayers = ["press", "release", "background"];
+var halfGreen = doc.layers.getByName("background").pageItems.getByName("half green")
 
 function exportImage(path, scale) {
     // Export the current group
+    scale = (typeof scale !== 'undefined') ? scale : 1;
     var options = new ExportOptionsPNG24();
     options.antiAliasing = true; // Enable anti-aliasing for smoother edges
     options.artBoardClipping = true; // Export only the artboard content
@@ -45,24 +26,57 @@ function showItem(item) {
 }
 
 function revealAndExport(item) {
+    // Shows the item
     item.hidden = false;
     // Export the current group
-    exportImage(assetPath + targetLayer.name + "/" + item.name + ".png", scale);
+    exportImage(assetPath + item.parent.name + "/" + item.name + ".png");
     // Hides the item
     item.hidden = true;
 }
 
-function actOnItemsInLayers(layers, callback) {
+function actOnFullLayers(layerNames, callback, parameters) {
 
-    for (var a = 0; a < layers.length; a++) {
-        layerItems = doc.layers.getByName(layers[a]).pageItems;
-        for (var i = 0; i < layerItems.length; i++) {
-            callback(layerItems[i]);
+    for (var i = 0; i < layerNames.length; i++) {
+        var layer = doc.layers.getByName(layerNames[i])
+        for (var j = 0; j < layer.pageItems.length; j++) {
+            var layerItem = layer.pageItems[j];
+            callback(layerItem, parameters);
         }
     }
 }
 
-// Run the function
-exportKeys(scale = 1);
+function actOnLayerItems(layerName, layerItemNames, callback, parameters) {
 
-exportPiano(scale = 1);
+    var layer = doc.layers.getByName(layerName)
+    for (var i = 0; i < layerItemNames.length; i++) {
+        var layerItem = layer.pageItems.getByName(layerItemNames[i]);
+        callback(layerItem, parameters);
+    }
+}
+
+// Function to isolate and export each group on the same artboard
+function exportKeys() {
+    // Hide all items in all layers
+    actOnFullLayers(allLayers, hideItem);
+
+    // halfGreen.hidden = false;
+
+    actOnFullLayers(["press", "release"], revealAndExport);
+
+    halfGreen.hidden = true;
+
+    actOnFullLayers(["release", "background"], showItem);
+}
+
+function exportPiano() {
+    // Hide all items in all layers
+    actOnFullLayers(allLayers, hideItem);
+    actOnFullLayers(["release"], showItem);
+
+    exportImage(assetPath + "octave.png");
+}
+
+// Run the function
+exportKeys();
+
+// exportPiano();
