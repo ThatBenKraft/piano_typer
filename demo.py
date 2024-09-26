@@ -44,9 +44,9 @@ def main() -> None:
             # If keystroke history is full:
             if len(keystroke_history) == NUM_KEYS_PRESSED:
                 # Accesses and inverts keystroke from DISTANCE ago
-                display.update_key(keystroke_history[0].inverted())
+                display._draw_keystroke(keystroke_history[0].inverted())
             # Updates display with keystroke
-            display.update_key(keystroke)
+            display._draw_keystroke(keystroke)
             # Adds window image to frames
             frames.append(get_image(display))
             # Adds keystroke to history
@@ -55,7 +55,7 @@ def main() -> None:
     # For each keystroke in remaining history:
     for keystroke in keystroke_history:
         # Updates display with keystroke
-        display.update_key(keystroke.inverted())
+        display._draw_keystroke(keystroke.inverted())
         # Adds window image to frames
         frames.append(get_image(display))
 
