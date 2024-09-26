@@ -1,3 +1,9 @@
+"""
+### Piano Export
+A small module used to manipulate, animate, and export frames from a `Display` 
+as .png's, .gif's, etc.
+"""
+
 import os
 import shutil
 from collections import deque
@@ -8,8 +14,17 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import pygame
 from PIL import Image
 
-from packaging import NOTES, Keystroke
+from packaging import Keystroke
 from visuals import Display, Paths
+
+__author__ = "Ben Kraft"
+__copyright__ = "None"
+__credits__ = "Ben Kraft"
+__license__ = "Apache"
+__version__ = "0.1.0"
+__maintainer__ = "Ben Kraft"
+__email__ = "ben.kraft@rcn.com"
+__status__ = "Prototype"
 
 EXPORT_DIRECTORY_PATH = Paths.ASSETS / "export"
 
@@ -25,9 +40,10 @@ index = 0
 
 
 def main() -> None:
-
+    """
+    Exports animation as gif under specified path.
+    """
     display = Display(num_octaves=6, scale=1)
-
     frames: list[Image.Image] = []
 
     empty_directory(EXPORT_DIRECTORY_PATH)
@@ -38,7 +54,7 @@ def main() -> None:
     # For each octave:
     for octave in range(display.num_octaves):
         # For each note index:
-        for note in NOTES:
+        for note in Keystroke.NOTES:
             # Creates keystroke
             keystroke = Keystroke(note, octave + display.starting_octave)
             # If keystroke history is full:
@@ -61,9 +77,9 @@ def main() -> None:
 
     export_as_gif(frames, EXPORT_DIRECTORY_PATH / "demo.gif")
 
-    # frames.reverse()
+    frames.reverse()
 
-    # export_as_gif(frames, EXPORT_DIRECTORY_PATH / "demo_reversed.gif")
+    export_as_gif(frames, EXPORT_DIRECTORY_PATH / "demo_reversed.gif")
 
 
 def export_as_gif(frames: list[Image.Image], path: Path) -> None:
@@ -96,6 +112,9 @@ def get_image(display: Display, save_image: bool = SAVE_IMAGES) -> Image.Image:
 
 
 def empty_directory(directory_path: Path) -> None:
+    """
+    Empties directory if it exists.
+    """
     try:
         # Check if the directory exists
         if directory_path.exists() and directory_path.is_dir():

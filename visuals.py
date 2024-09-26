@@ -1,5 +1,5 @@
 """
-## Visuals
+### Visuals
 Allows for the creation of piano display windows, to be updated with key presses.
 """
 
@@ -48,7 +48,13 @@ class Paths:
 
 class Display:
     """
-    A window display to render piano and key presses when they occur.
+    A window display to render a piano and key presses when they occur.
+
+    Attributes:
+        num_octaves: Number of octaves in the piano display.
+        starting_octave: The first octave to be shown.
+        scale: Scale factor for resizing images.
+        background_color: RGB tuple of the display's background color.
     """
 
     def __init__(
@@ -59,7 +65,13 @@ class Display:
         background_color: tuple[int, int, int] = Defaults.BACKGROUND_COLOR,
     ) -> None:
         """
-        A window display to render piano and key presses when they occur.
+        Initializes the display window and loads necessary assets.
+
+        Args:
+            num_octaves: Number of octaves in the piano display.
+            starting_octave: The first octave to be shown.
+            scale: Scale factor for resizing images.
+            background_color: RGB tuple of the display's background color.
         """
         # Sets up display variables
         pygame.init()
@@ -67,19 +79,14 @@ class Display:
         self.starting_octave = starting_octave
         self.scale = scale
         self.background_color = background_color
-        self.ACTIONS = ("release", "press")
-        self.NOTES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
-        # Creates window elements
         self._clock = pygame.time.Clock()
         self.clear_memory()
-        # Creates display window
+
         with Image.open(Paths.OCTAVE) as image:
             self._set_window_size(image.size)
-        # For each action:
-        for action in self.ACTIONS:
-            # For each note:
-            for note in self.NOTES:
-                # Creates path and loads image to memory
+        # Loads key images to memory preemptively
+        for action in Keystroke.ACTIONS:
+            for note in Keystroke.NOTES:
                 self._load_image(self._get_image_path(note, action), cache=True)
         # Adds a title and iconto display
         pygame.display.set_caption("Piano Display")
@@ -135,13 +142,13 @@ class Display:
         Draws key on display. Updates surface if specified.
         """
         # Gets image from keystroke
-        path = self._get_image_path(keystroke.note, self.ACTIONS[keystroke.press])
+        path = self._get_image_path(keystroke.note, Keystroke.ACTIONS[keystroke.press])
         # Draws key at relative octave
         self._draw_image_at(
             self._load_image(path), keystroke.octave - self.starting_octave, update
         )
 
-    def update_with(self, keystroke: Keystroke, update: bool = True) -> None:
+    def update_key(self, keystroke: Keystroke, update: bool = True) -> None:
         """
         Updates held keystrokes with new keystroke. Updates surface if specified.
         """
@@ -170,7 +177,7 @@ class Display:
 
     def refresh(self) -> None:
         """
-        Draws piano on display screen.
+        Draws piano and keys on display screen.
         """
         # Defines octave surface
         octave_image = self._load_image(Paths.OCTAVE, cache=True)
@@ -186,7 +193,16 @@ class Display:
         # Updates the full display
         pygame.display.flip()
 
+    def tick(self, frame_rate: int = Defaults.FRAME_RATE) -> None:
+        """
+        Delays by amount of time nessesary to maintain specified frame rate.
+        """
+        self._clock.tick(frame_rate)
+
     def __del__(self) -> None:
+        self.close()
+
+    def close(self) -> None:
         pygame.quit()
 
     def is_closed(self) -> bool:
@@ -194,18 +210,10 @@ class Display:
         Returns true if window is closed.
         """
         # For every event in pygame:
-        for event in pygame.event.get():
-            # If event is quit, return true
-            if event.type == pygame.QUIT:
-                return True
+        if pygame.event.peek(pygame.QUIT):
+            return True
         # Otherwise, return false
         return False
-
-    def tick(self, frame_rate: int = Defaults.FRAME_RATE) -> None:
-        """
-        Delays by amount of time nessesary to maintain specified frame rate.
-        """
-        self._clock.tick(frame_rate)
 
 
 if __name__ == "__main__":
@@ -213,13 +221,14 @@ if __name__ == "__main__":
     display = Display()
 
     time.sleep(0.5)
-    display.update_with(Keystroke(note="C", octave=5, press=True))
+    display.update_key(Keystroke("C", 5))
     time.sleep(0.5)
-    display.update_with(Keystroke(note="C", octave=5, press=False))
+    display.update_key(Keystroke("C", 5, press=False))
     time.sleep(0.5)
-    display.update_with(Keystroke(note="D", octave=5, press=True))
-    display.update_with(Keystroke(note="F", octave=5, press=True))
-    display.update_with(Keystroke(note="F#", octave=5, press=True))
+    display.update_key(Keystroke("D", 5))
+    display.update_key(Keystroke("F", 5))
+    display.update_key(Keystroke("F#", 5))
+    display.update_key(Keystroke("A", 4))
 
     # Keeps display running until closed
     while True:
