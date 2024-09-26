@@ -12,9 +12,6 @@ from PIL import Image
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import pygame
 
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
-import pygame
-
 from packaging import Keystroke
 
 __author__ = "Ben Kraft"
@@ -36,7 +33,6 @@ class Defaults:
     STARTING_OCTAVE = 3
     SCALE = 1
     FRAME_RATE = 60
-    BACKGROUND_COLOR = (0, 255, 0)
     BACKGROUND_COLOR = (0, 255, 0)
 
 
@@ -67,7 +63,6 @@ class Display:
         starting_octave: int = Defaults.STARTING_OCTAVE,
         scale: float = Defaults.SCALE,
         background_color: tuple[int, int, int] = Defaults.BACKGROUND_COLOR,
-        background_color: tuple[int, int, int] = Defaults.BACKGROUND_COLOR,
     ) -> None:
         """
         Initializes the display window and loads necessary assets.
@@ -96,18 +91,9 @@ class Display:
         # Adds a title and iconto display
         pygame.display.set_caption("Piano Display")
         pygame.display.set_icon(self._load_image(Paths.ICON))
-        pygame.display.set_icon(self._load_image(Paths.ICON))
         # Draws extended piano
         self.refresh()
 
-    def clear_memory(self) -> None:
-        """
-        Clears image and keystroke memory.
-        """
-        self._image_memory: dict[Path, pygame.Surface] = {}
-        self.held_keystrokes: set[Keystroke] = set()
-
-    def _load_image(self, path: Path, cache: bool = False) -> pygame.Surface:
     def clear_memory(self) -> None:
         """
         Clears image and keystroke memory.
@@ -126,11 +112,9 @@ class Display:
         else:
             try:
                 image = pygame.image.load(path).convert_alpha()
-                image = pygame.image.load(path).convert_alpha()
             except FileNotFoundError:
                 print(f"Cannot load image: {path}")
                 raise SystemExit
-            # Adds to memory if specified
             # Adds to memory if specified
             if cache:
                 self._image_memory[path] = image
@@ -140,12 +124,10 @@ class Display:
         return pygame.transform.scale(image, scaled_size)
 
     def _draw_image_at(
-    def _draw_image_at(
         self, image: pygame.Surface, octave: int, update: bool = False
     ) -> None:
         """
-        Draws surface at specified octave. Updates surface if specified.s
-        Draws surface at specified octave. Updates surface if specified.s
+        Draws surface at specified octave. Updates surface if specified.
         """
         # Creates rectangle size of octave surface at relative position
         rectangle = pygame.Rect((octave * self._octave_size[0], 0), self._octave_size)
@@ -203,16 +185,10 @@ class Display:
         # Fills screen with background color
         self._window.fill(self.background_color)
         # Draws base piano
-        # Fills screen with background color
-        self._window.fill(self.background_color)
-        # Draws base piano
         for octave in range(self.num_octaves):
             self._draw_image_at(octave_image, octave)
         # Draws all held keys
-            self._draw_image_at(octave_image, octave)
-        # Draws all held keys
         for keystroke in self.held_keystrokes:
-            self._draw_keystroke(keystroke)
             self._draw_keystroke(keystroke)
         # Updates the full display
         pygame.display.flip()

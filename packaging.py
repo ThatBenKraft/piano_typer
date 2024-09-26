@@ -47,7 +47,7 @@ class Keystroke:
             raise ValueError(
                 f"Invalid note: {self.note}, available notes: {self.NOTES}"
             )
-        if self.octave < 0:
+        if octave < 0:
             raise ValueError(f"Invalid octave: {self.octave}")
         self.octave = octave
         self.press = press
