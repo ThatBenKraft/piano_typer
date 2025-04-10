@@ -1,6 +1,10 @@
 # Custom files/directories
 testing.py
 assets/export/
+assets/old/
+assets/stream/
+
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
